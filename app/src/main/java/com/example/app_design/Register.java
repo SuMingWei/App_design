@@ -15,14 +15,16 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class Register extends AppCompatActivity {
     private EditText account, password;
-    private Button confirm, register_btn;
+    private Button confirm, login_btn;
     private TextView message;
 
     ArrayList<ArrayList<String>> accountInfo = new ArrayList<ArrayList<String>>();
@@ -32,18 +34,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_register);
 
         findObject();
         checkPermissions();
+        getStorageInfo();
         buttonClickEvent();
     }
 
     public void findObject(){
         account = findViewById(R.id.account);
         password = findViewById(R.id.password);
-        confirm = findViewById(R.id.login_btn);
-        register_btn = findViewById(R.id.register_btn);
+        confirm = findViewById(R.id.register_btn);
+        login_btn = findViewById(R.id.login_btn);
         message = findViewById(R.id.null_box);
     }
 
@@ -51,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
         int writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         int readPermission = ActivityCompat.checkSelfPermission(this,Manifest.permission.READ_EXTERNAL_STORAGE);
         if(writePermission != PackageManager.PERMISSION_GRANTED || readPermission != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(MainActivity.this,
+            ActivityCompat.requestPermissions(Register.this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE},
                     1);
         }
@@ -75,30 +78,48 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public boolean identify(String user_account,String user_password){
+    public void writeStorageInfo(){
+        try{
+            FileOutputStream fos = new FileOutputStream(path);
+            for(int i=0;i<accountInfo.size();i++){
+                //Toast.makeText(Register.this,accountInfo.size(),Toast.LENGTH_SHORT).show();
+                fos.write(accountInfo.get(i).get(0).getBytes());
+                fos.write(" ".getBytes());
+                fos.write(accountInfo.get(i).get(1).getBytes());
+                fos.write("\n".getBytes());
+
+            }
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean checkAccount(String user_account){
         for(int i=0;i<accountInfo.size();i++){
-            if(user_account.equals(accountInfo.get(i).get(0)) && user_password.equals(accountInfo.get(i).get(1))){
+            if(user_account.equals(accountInfo.get(i).get(0))){
                 return true;
             }
         }
         return false;
     }
 
-    public void login(){
+    public void register(){
         String user_account = account.getText().toString();
         String user_password = password.getText().toString();
-
-        if(user_account.equals("") || user_password.equals("")){
-            Toast.makeText(MainActivity.this,"請輸入完整資料",Toast.LENGTH_SHORT).show();
-        }else {
-            if(identify(user_account,user_password)){
-                Intent intent = new Intent();
-                intent.putExtra("user_account",user_account);
-                intent.setClass(MainActivity.this,Home.class);
-                startActivity(intent);
-            }else{
-                Toast.makeText(MainActivity.this,"帳號或密碼錯誤",Toast.LENGTH_SHORT).show();
-            }
+        if(checkAccount(user_account)){
+            Toast.makeText(Register.this,"帳號已被註冊",Toast.LENGTH_SHORT).show();
+        }else{
+            // add new account
+            ArrayList<String> newAccount = new ArrayList<String>();
+            newAccount.add(user_account);
+            newAccount.add(user_password);
+            accountInfo.add(newAccount);
+            writeStorageInfo();
+            Toast.makeText(Register.this,"註冊成功",Toast.LENGTH_SHORT).show();
+            // voice API
         }
     }
 
@@ -106,18 +127,16 @@ public class MainActivity extends AppCompatActivity {
         confirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getStorageInfo();
-                login();
+                register();
             }
         });
 
-        register_btn.setOnClickListener(new View.OnClickListener() {
+        login_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                intent.setClass(MainActivity.this,Register.class);
-                startActivity(intent);
+                finish();
             }
         });
     }
+
 }
