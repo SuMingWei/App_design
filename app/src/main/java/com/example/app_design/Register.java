@@ -7,6 +7,9 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class Register extends AppCompatActivity {
     private EditText account, password;
@@ -28,8 +32,8 @@ public class Register extends AppCompatActivity {
     private TextView message;
 
     ArrayList<ArrayList<String>> accountInfo = new ArrayList<ArrayList<String>>();
-
     String path = "/storage/emulated/0/DCIM/accountList.txt";
+    private TextToSpeech talk_object;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +62,13 @@ public class Register extends AppCompatActivity {
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE},
                     1);
         }
+
+        int recordPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
+        if(recordPermission != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(Register.this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    1);
+        }
     }
 
     public void getStorageInfo(){
@@ -82,7 +93,6 @@ public class Register extends AppCompatActivity {
         try{
             FileOutputStream fos = new FileOutputStream(path);
             for(int i=0;i<accountInfo.size();i++){
-                //Toast.makeText(Register.this,accountInfo.size(),Toast.LENGTH_SHORT).show();
                 fos.write(accountInfo.get(i).get(0).getBytes());
                 fos.write(" ".getBytes());
                 fos.write(accountInfo.get(i).get(1).getBytes());
@@ -118,9 +128,44 @@ public class Register extends AppCompatActivity {
             newAccount.add(user_password);
             accountInfo.add(newAccount);
             writeStorageInfo();
-            Toast.makeText(Register.this,"註冊成功",Toast.LENGTH_SHORT).show();
             // voice API
+            talk_object = initTalkObject();
+            botSayChinese("註冊成功");
         }
+    }
+
+    // 中文語音合成
+    public TextToSpeech initTalkObject(){
+        talk_object = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status == TextToSpeech.SUCCESS){
+                    // 調整語調
+                    talk_object.setPitch((float)1.0);
+                    // 調整語速
+                    talk_object.setSpeechRate((float)2.0);
+                    // 地區
+                    Locale locale = Locale.TAIWAN;
+                    if(talk_object.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE){
+                        talk_object.setLanguage(locale);
+                    }
+                }
+            }
+        });
+        return talk_object;
+    }
+
+    public void botSayChinese(final  String s){
+        Toast.makeText(Register.this,s,Toast.LENGTH_SHORT).show();
+        Handler handler = new Handler();
+        // (要做什麼事，delay的豪秒數)
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                talk_object.speak(s,TextToSpeech.QUEUE_FLUSH,null);
+                while(talk_object.isSpeaking()){}
+            }
+        },500);
     }
 
     public void buttonClickEvent(){
