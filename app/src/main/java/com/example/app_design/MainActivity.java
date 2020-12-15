@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -26,8 +27,11 @@ public class MainActivity extends AppCompatActivity {
     private TextView message;
 
     ArrayList<ArrayList<String>> accountInfo = new ArrayList<ArrayList<String>>();
-
     String path = "/storage/emulated/0/DCIM/accountList.txt";
+
+    private ArrayList<ContactInfo> contactList = new ArrayList<ContactInfo>();
+    private ArrayList<ArrayList<String>> accountList = new ArrayList<ArrayList<String>>();
+    private DBHelper myDBHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,8 +39,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         findObject();
-        checkPermissions();
         buttonClickEvent();
+
+        //checkPermissions();
     }
 
     public void findObject(){
@@ -47,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         message = findViewById(R.id.null_box);
     }
 
+    // local storage
     public void checkPermissions(){
         int writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         int readPermission = ActivityCompat.checkSelfPermission(this,Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -102,12 +108,72 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // database
+    public void setAccountList(){
+        myDBHelper = new DBHelper(this);
+        contactList.addAll(myDBHelper.getTotalContactInfo());
+        accountList = this.getTotalDataSource();
+    }
+
+    public ArrayList<ArrayList<String>> getTotalDataSource(){
+        ArrayList<ArrayList<String>> totalAccountData = new ArrayList<ArrayList<String>>();
+        ArrayList<String> tempList;
+
+        for(int index=0; index < this.contactList.size(); index++){
+            ContactInfo eachPersonContactInfo = this.contactList.get(index);
+            tempList = new ArrayList<String>();
+            tempList.add(eachPersonContactInfo.getUserAccount());
+            tempList.add(eachPersonContactInfo.getUserPassword());
+
+            totalAccountData.add(tempList);
+        }
+
+        return totalAccountData;
+    }
+
+    public boolean identify_db(String user_account,String user_password){
+        for(int i=0;i<accountList.size();i++){
+            if(user_account.equals(accountList.get(i).get(0)) && user_password.equals(accountList.get(i).get(1))){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void login_db(){
+        String user_account = account.getText().toString();
+        String user_password = password.getText().toString();
+
+
+        if(user_account.equals("") || user_password.equals("")){
+            Toast.makeText(MainActivity.this,"請輸入完整資料",Toast.LENGTH_SHORT).show();
+        }else {
+
+            if(identify_db(user_account,user_password)){
+                Intent intent = new Intent();
+                intent.putExtra("user_account",user_account);
+                intent.setClass(MainActivity.this,AccountInfo.class);
+                startActivity(intent);
+            }else{
+                Toast.makeText(MainActivity.this,"帳號或密碼錯誤",Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     public void buttonClickEvent(){
         confirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getStorageInfo();
-                login();
+                // getStorageInfo();
+                // login();
+
+                setAccountList();
+                login_db();
+//                Intent intent = new Intent();
+//                intent.putExtra("user_account","user_account");
+//                intent.setClass(MainActivity.this,AccountInfo.class);
+//                startActivity(intent);
+
             }
         });
 

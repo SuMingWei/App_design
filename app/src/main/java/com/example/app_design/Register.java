@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -31,9 +32,14 @@ public class Register extends AppCompatActivity {
     private Button confirm, login_btn;
     private TextView message;
 
+    private TextToSpeech talk_object;
+
     ArrayList<ArrayList<String>> accountInfo = new ArrayList<ArrayList<String>>();
     String path = "/storage/emulated/0/DCIM/accountList.txt";
-    private TextToSpeech talk_object;
+
+    private ArrayList<ContactInfo> contactList = new ArrayList<ContactInfo>();
+    private ArrayList<ArrayList<String>> accountList = new ArrayList<ArrayList<String>>();
+    private DBHelper myDBHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,9 +47,13 @@ public class Register extends AppCompatActivity {
         setContentView(R.layout.activity_register);
 
         findObject();
-        checkPermissions();
-        getStorageInfo();
         buttonClickEvent();
+
+        //checkPermissions();
+        //getStorageInfo();
+
+        setAccountList();
+
     }
 
     public void findObject(){
@@ -54,6 +64,7 @@ public class Register extends AppCompatActivity {
         message = findViewById(R.id.null_box);
     }
 
+    // local storage
     public void checkPermissions(){
         int writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         int readPermission = ActivityCompat.checkSelfPermission(this,Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -168,11 +179,66 @@ public class Register extends AppCompatActivity {
         },500);
     }
 
+    // database
+    public void setAccountList(){
+        myDBHelper = new DBHelper(Register.this);
+        contactList.addAll(myDBHelper.getTotalContactInfo());
+        accountList = this.getTotalDataSource();
+    }
+
+    public ArrayList<ArrayList<String>> getTotalDataSource(){
+        ArrayList<ArrayList<String>> totalAccountData = new ArrayList<ArrayList<String>>();
+        ArrayList<String> tempList;
+
+        for(int index=0; index < this.contactList.size(); index++){
+            ContactInfo eachPersonContactInfo = this.contactList.get(index);
+            tempList = new ArrayList<String>();
+            tempList.add(eachPersonContactInfo.getUserAccount());
+            tempList.add(eachPersonContactInfo.getUserPassword());
+
+            totalAccountData.add(tempList);
+        }
+
+        return totalAccountData;
+    }
+
+    public boolean checkAccount_db(String user_account){
+        for(int i=0;i<accountList.size();i++){
+            if(user_account.equals(accountList.get(i).get(0))){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void register_db(){
+        String user_account = account.getText().toString();
+        String user_password = password.getText().toString();
+
+        if(user_account.length() != 0 && user_password.length() != 0){
+            if(checkAccount_db(user_account)){
+                Toast.makeText(Register.this,"帳號已被註冊",Toast.LENGTH_SHORT).show();
+            }else{
+                // add new account
+                ArrayList<String> newAccount = new ArrayList<String>();
+                newAccount.add(user_account);
+                newAccount.add(user_password);
+                accountList.add(newAccount);
+
+                this.myDBHelper.insertToLocalDB(user_account,user_password);
+            }
+        }else {
+            Toast.makeText(Register.this,"您的資料不完整，請重新再試",Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
     public void buttonClickEvent(){
         confirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                register();
+                // register();
+                register_db();
             }
         });
 
